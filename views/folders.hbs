@@ -1,17 +1,40 @@
 <!DOCTYPE html>
 <html>
+
   <head>
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
+      integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <link href="https://fonts.googleapis.com/css?family=Major+Mono+Display&display=swap" rel="stylesheet"> 
     <link rel="stylesheet" href="/stylesheets/page.css">
   </head>
-  <body>
-    <div class="folder-list__page">
-      <header class="folder-list__head"> DropBox Listing </header>
-      <div class="folder-list__container">
-        {{#each folders }}
-          <a href={{this}} class="folder-list__box">
-            <span>{{this}}</span>
-          </a>
-        {{/each}}
+
+  <body class="bg-dark">
+    <div class="folder-list__page bg-dark">
+      <header class="folder-list__head logo"> DBX </header>
+      <div class="container">
+        <nav aria-label="breadcrumb bg-dark">
+          <ol class="breadcrumb">
+            {{#each breadcrumbs as |breadcrumb| }}
+              <li class="breadcrumb-item" aria-current="page"> <a href="{{breadcrumb.path}}"> {{breadcrumb.name}} </a>
+              </li>
+            {{/each}}
+          </ol>
+        </nav>
+        <div class="folder-list__container">
+          {{#each folders }}
+            <a href={{this}} class="folder-list__box">
+              <span>{{this}}</span>
+            </a>
+          {{/each}}
+
+          {{#each imgs as |img| }}
+            <a href={{img.path}} class="folder-list__box p-0">
+              <div class="loader"></div> 
+              <div class="img " style="background-image: url({{img.img_path}})">
+              </div>
+            </a>
+          {{/each}}
+        </div>
       </div>
 
     </div>

@@ -10,26 +10,37 @@ module.exports.home = async (req, res, next) => {
   let token = req.session.token;
   if (token) {
     try {
-      let folderPaths,
-        path = req.path === '/' ? '' : req.path;
+      let path = req.path === '/' ? '' : req.path;
+      let isNotImgPath = true;
       if (path.match(/\.(gif|jpg|jpeg|tiff|png)$/i)) {
-        folderPaths = [];
         path = '/' ? '' : '';
-      } else {
-        folderPaths = await listFolderPathsAsync(token, path);
-        folderPaths = folderPaths.every(_path =>
-          _path.match(/\.(gif|jpg|jpeg|tiff|png)$/i)
-        )
-          ? []
-          : folderPaths;
+        isNotImgPath = false;
       }
-      let paths = await getLinksAsync(token, path);
-      console.log(folderPaths);
-      console.log(paths);
-      if (folderPaths.length > 0) {
-        res.render('folders', {folders: folderPaths, layout: false});
-      } else if (paths.length > 0) {
-        res.render('gallery', {imgs: paths, layout: false});
+      let {paths, img_paths} = await getLinksAsync(token, path);
+      setBreadcrumbs(req);
+      if (paths.length > 0 && isNotImgPath) {
+        let folders = paths.filter(
+          _path => !_path.match(/\.(gif|jpg|jpeg|tiff|png)$/i)
+        );
+        let img_folders_path = paths.filter(_path =>
+          _path.match(/\.(gif|jpg|jpeg|tiff|png)$/i)
+        );
+        let imgs = [];
+        for (let i = 0; i < img_paths.length; i++) {
+          let img_folders = {};
+          img_folders.path = img_folders_path[i];
+          img_folders.img_path = img_paths[i];
+          imgs.push(img_folders);
+        }
+
+        res.render('folders', {
+          breadcrumbs: req.breadcrumbs(),
+          folders,
+          imgs,
+          layout: false
+        });
+      } else if (img_paths.length > 0) {
+        res.render('gallery', {imgs: img_paths, layout: false});
       } else {
         //if no images, ask user to upload some
         res.render('empty', {layout: false});
@@ -156,24 +167,24 @@ It is a two step process:
 async function getLinksAsync(token, path = '') {
   //List images from the root of the app folder
   let result = await listImagePathsAsync(token, path);
-
   //Get a temporary link for each of those paths returned
+  let imgPaths = result.paths.filter(
+    _path => _path.search(/\.(gif|jpg|jpeg|tiff|png)$/i) > -1
+  );
+
   let temporaryLinkResults = await getTemporaryLinksForPathsAsync(
     token,
-    result.paths
+    imgPaths
   );
 
   //Construct a new array only with the link field
-  var temporaryLinks = temporaryLinkResults.map(function (entry) {
-    return entry.link;
-  });
+  result.img_paths = temporaryLinkResults.map(entry => entry.link);
 
-  return temporaryLinks;
+  return result;
 }
 
 // get list of folders form the selected folder
 async function listFolderPathsAsync(token, path = '') {
-  console.log(path);
   let options = {
     url: config.DBX_API_DOMAIN + config.DBX_LIST_FOLDER_PATH,
     headers: {Authorization: 'Bearer ' + token},
@@ -215,14 +226,17 @@ async function listImagePathsAsync(token, path) {
     //Make request to Dropbox to get list of files
     let result = await rp(options);
     //Filter response to images only
-    let entriesFiltered = result.entries.filter(function (entry) {
-      return entry.path_lower.search(/\.(gif|jpg|jpeg|tiff|png)$/i) > -1;
-    });
+    //let entriesFiltered = result.entries.filter(function (entry) {
+    //return entry.path_lower.search(/\.(gif|jpg|jpeg|tiff|png)$/i) > -1;
+    //});
+
+    //let entriesFiltered = result.entries.filter(
+    //entry => entry.path_lower.search(/\.(gif|jpg|jpeg|tiff|png)$/i) > -1
+    //);
+    let entriesFiltered = result.entries;
 
     //Get an array from the entries with only the path_lower fields
-    var paths = entriesFiltered.map(function (entry) {
-      return entry.path_lower;
-    });
+    var paths = entriesFiltered.map(entry => entry.path_lower);
 
     //return a cursor only if there are more files in the current folder
     let response = {};
@@ -232,6 +246,25 @@ async function listImagePathsAsync(token, path) {
   } catch (error) {
     return next(new Error('error listing folder. ' + error.message));
   }
+}
+
+function setBreadcrumbs(req) {
+  let menu = [
+    {
+      name: 'Home',
+      path: '/'
+    }
+  ];
+  let i = 0;
+  let reqPaths = req.path.split('/').filter(p => p !== '');
+  for (let p of reqPaths) {
+    menu.push({
+      name: p,
+      path: '/' + reqPaths.slice(0, i + 1).join('/')
+    });
+    i++;
+  }
+  req.breadcrumbs(menu);
 }
 
 //Returns an array with temporary links from an array with file paths
