@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <link rel="stylesheet" href="/stylesheets/page.css">
+  </head>
+  <body>
+    <div class="folder-list__page">
+      <header class="folder-list__head"> DropBox Listing </header>
+      <div class="folder-list__container">
+        {{#each folders }}
+          <a href={{this}} class="folder-list__box">
+            <span>{{this}}</span>
+          </a>
+        {{/each}}
+      </div>
+
+    </div>
+  </body>
+
+</html>

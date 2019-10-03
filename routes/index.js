@@ -9,6 +9,8 @@ router.get('/login', controller.login);
 
 router.get('/logout', controller.logout);
 
-router.get('/oauthredirect',controller.oauthredirect);
+router.get('/oauthredirect', controller.oauthredirect);
+
+router.get('*', controller.home);
 
 module.exports = router;
