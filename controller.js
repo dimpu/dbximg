@@ -10,9 +10,22 @@ module.exports.home = async (req, res, next) => {
   let token = req.session.token;
   if (token) {
     try {
-      let path = req.path === '/' ? '' : req.path;
-      let folderPaths = await listFolderPathsAsync(token, path);
+      let folderPaths,
+        path = req.path === '/' ? '' : req.path;
+      if (path.match(/\.(gif|jpg|jpeg|tiff|png)$/i)) {
+        folderPaths = [];
+        path = '/' ? '' : '';
+      } else {
+        folderPaths = await listFolderPathsAsync(token, path);
+        folderPaths = folderPaths.every(_path =>
+          _path.match(/\.(gif|jpg|jpeg|tiff|png)$/i)
+        )
+          ? []
+          : folderPaths;
+      }
       let paths = await getLinksAsync(token, path);
+      console.log(folderPaths);
+      console.log(paths);
       if (folderPaths.length > 0) {
         res.render('folders', {folders: folderPaths, layout: false});
       } else if (paths.length > 0) {
@@ -172,8 +185,11 @@ async function listFolderPathsAsync(token, path = '') {
   try {
     let result = await rp(options);
     let entriesFiltered = result.entries.filter(
-      entry => entry['.tag'] === 'folder'
+      entry =>
+        entry['.tag'] === 'folder' ||
+        entry.path_lower.search(/\.(gif|jpg|jpeg|tiff|png)$/i) > -1
     );
+    //let entriesFiltered = result.entries;
     //Get an array from the entries with only the path_lower fields
     var paths = entriesFiltered.map(function (entry) {
       return entry.path_lower;
